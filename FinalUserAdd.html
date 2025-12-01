@@ -3,110 +3,386 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IPC_SIM // SECURE_KERNEL</title>
+    <title>IPC_SIM // KERNEL_OS</title>
+    
+    <!-- Fonts: Inter (UI) and JetBrains Mono (Code) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
     <style>
+        /* --- THEME VARIABLES --- */
         :root {
-            --bg: #e0e0e0;
-            --border: 3px solid #000000;
-            --shadow: 6px 6px 0px #000000;
-            --red: #ff6b6b;
-            --yellow: #feca57;
-            --green: #1dd1a1;
-            --blue: #54a0ff;
-            --purple: #a29bfe;
-            --mono: 'Courier New', Courier, monospace;
+            /* Dark Slate Base */
+            --bg-app: #020617;
+            --bg-panel: #0f172a;
+            --bg-surface: #1e293b;
+            
+            /* Borders & Separators */
+            --border-subtle: #334155;
+            --border-active: #475569;
+
+            /* Text */
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+
+            /* Identity Colors */
+            --color-root: #f43f5e;   /* Rose */
+            --color-user: #f59e0b;   /* Amber */
+            --color-guest: #10b981;  /* Emerald */
+            --color-kernel: #6366f1; /* Indigo */
+            --color-wire: rgba(255, 255, 255, 0.15);
+            
+            /* Fonts */
+            --font-ui: 'Inter', sans-serif;
+            --font-code: 'JetBrains Mono', monospace;
         }
-        * { box-sizing: border-box; user-select: none; }
+
+        * { box-sizing: border-box; user-select: none; outline: none; }
+
         body {
             margin: 0; padding: 20px;
-            background-color: var(--bg);
-            font-family: var(--mono);
+            background-color: var(--bg-app);
+            color: var(--text-primary);
+            font-family: var(--font-ui);
             height: 100vh;
             display: flex; flex-direction: column; gap: 20px;
             overflow: hidden;
+            background-image: radial-gradient(#1e293b 1px, transparent 1px);
+            background-size: 24px 24px;
         }
+
+        /* --- HEADER (Glass Bar) --- */
         header {
-            background: white; border: var(--border); box-shadow: var(--shadow);
-            padding: 15px; display: flex; justify-content: space-between; align-items: center;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 0 24px;
+            height: 70px;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
             z-index: 100;
         }
-        h1 { margin: 0; font-size: 24px; font-weight: 900; transform: skew(-5deg); background: black; color: white; padding: 5px 15px; }
-        .btn-group { display: flex; gap: 10px; }
-        button[title]:hover::after {
-            content: attr(title);
-            position: absolute;
-            top: 100%; left: 50%; transform: translateX(-50%);
-            background: black; color: white; padding: 5px; font-size: 10px;
-            white-space: nowrap; pointer-events: none; margin-top: 5px;
-            z-index: 200;
+
+        h1 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            display: flex; align-items: center; gap: 12px;
         }
+        h1 span {
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .status-dot {
+            width: 8px; height: 8px;
+            background: #22c55e;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #22c55e;
+        }
+
+        /* Button Group */
+        .btn-group { display: flex; gap: 8px; }
+
+        .icon-btn {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            width: 42px; height: 42px;
+            border-radius: 8px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .icon-btn:hover {
+            background: var(--bg-app);
+            color: var(--text-primary);
+            border-color: var(--text-secondary);
+            transform: translateY(-1px);
+        }
+        .reset-btn {
+            background: rgba(244, 63, 94, 0.1);
+            border: 1px solid rgba(244, 63, 94, 0.2);
+            color: var(--color-root);
+            font-size: 12px;
+            font-weight: 700;
+            padding: 0 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: var(--font-code);
+        }
+        .reset-btn:hover {
+            background: var(--color-root);
+            color: white;
+            box-shadow: 0 0 15px rgba(244, 63, 94, 0.4);
+        }
+
+        /* --- BENTO LAYOUT --- */
         .layout {
-            display: grid; grid-template-columns: 1fr 380px; gap: 20px; height: 100%;
+            display: grid;
+            grid-template-columns: 1fr 360px;
+            gap: 20px;
+            height: 100%;
             min-height: 0;
         }
+
+        /* --- KERNEL SPACE (The Stage) --- */
         .kernel-space {
-            background: white; border: var(--border); box-shadow: var(--shadow);
+            background: var(--bg-panel);
+            border: 1px solid var(--border-subtle);
+            border-radius: 24px;
             position: relative;
-            background-image: radial-gradient(#00000022 2px, transparent 2px);
-            background-size: 20px 20px;
             overflow: hidden;
+            box-shadow: inset 0 0 100px rgba(0,0,0,0.5);
         }
+
         #wire-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; z-index: 0;
         }
+
+        /* ACL Legend Floating Pill */
+        .acl-legend {
+            position: absolute; top: 24px; left: 24px;
+            background: rgba(2, 6, 23, 0.8);
+            backdrop-filter: blur(4px);
+            border: 1px solid var(--border-subtle);
+            padding: 12px 16px;
+            border-radius: 12px;
+            pointer-events: none;
+        }
+        .acl-title {
+            font-family: var(--font-code);
+            font-size: 10px; color: var(--text-secondary);
+            letter-spacing: 1px;
+            font-weight: 700;
+            margin-bottom: 8px; display: block;
+        }
+        .acl-item {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 11px; color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+        .dot { width: 6px; height: 6px; border-radius: 50%; }
+
+        /* --- KERNEL NODE (The Core) --- */
         .kernel-node {
             position: absolute;
             left: 50%; top: 50%;
             transform: translate(-50%, -50%);
-            width: 200px; height: 150px;
-            border: var(--border); border-radius: 15px;
-            background: var(--blue); color: white;
+            width: 220px; height: 160px;
+            
+            /* Glass Effect */
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            backdrop-filter: blur(4px);
+            box-shadow: 0 0 40px rgba(99, 102, 241, 0.15);
+            
+            border-radius: 20px;
             z-index: 5;
             display: flex; flex-direction: column; align-items: center;
-            padding: 10px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            padding: 12px;
             transition: transform 0.05s;
         }
+
         .kernel-header {
-            border-bottom: 2px solid white; width: 100%; text-align: center;
-            padding-bottom: 5px; margin-bottom: 5px; font-weight: bold;
+            font-family: var(--font-code);
+            font-size: 10px; letter-spacing: 1px;
+            color: #a5b4fc;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            font-weight: 700;
         }
+
         .buffer-container {
-            width: 100%; flex-grow: 1; overflow-y: auto;
+            width: 100%; flex-grow: 1;
+            background: rgba(0,0,0,0.3);
+            border-radius: 12px;
+            overflow-y: auto;
             display: flex; flex-direction: column; gap: 4px;
+            padding: 4px;
         }
         .buffer-container::-webkit-scrollbar { width: 0; }
+
+        /* Buffered Message Pill */
         .msg-item {
-            background: white; color: black; border: 2px solid black;
-            font-size: 10px; padding: 3px; text-align: center; font-weight: bold;
-            animation: slideIn 0.2s;
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            border-left: 3px solid transparent;
+            font-family: var(--font-code);
+            font-size: 10px; padding: 6px;
+            border-radius: 4px;
+            text-align: center;
+            animation: slideIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex; justify-content: space-between; padding: 6px 10px;
         }
         @keyframes slideIn { from { transform: translateY(10px); opacity:0; } to { transform: translateY(0); opacity:1; } }
+
+        /* --- PROCESS NODES --- */
         .node {
             position: absolute;
             width: 90px; height: 90px;
-            border: var(--border); border-radius: 50%;
-            background: white;
+            background: var(--bg-panel);
+            border: 2px solid transparent;
+            border-radius: 50%;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            font-weight: bold; z-index: 2;
-            box-shadow: 4px 4px 0px rgba(0,0,0,0.2);
+            z-index: 2;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            transition: transform 0.2s ease;
         }
-        .node.root { background: var(--red); }
-        .node.user { background: var(--yellow); }
-        .node.guest { background: var(--green); }
-        .pid {
-            background: black; color: white; padding: 2px 5px;
-            font-size: 10px; position: absolute; bottom: -10px;
+        .node:hover { transform: scale(1.05); z-index: 10; }
+        
+        .node span { font-size: 11px; font-weight: 600; color: var(--text-primary); }
+        .pid { 
+            font-family: var(--font-code);
+            background: rgba(0,0,0,0.5); 
+            color: var(--text-secondary); 
+            padding: 2px 6px; border-radius: 4px;
+            font-size: 9px; margin-top: 4px;
         }
+
+        /* Type Styling */
+        .node.root { border-color: var(--color-root); box-shadow: 0 0 20px rgba(244, 63, 94, 0.2); }
+        .node.user { border-color: var(--color-user); box-shadow: 0 0 20px rgba(245, 158, 11, 0.2); }
+        .node.guest { border-color: var(--color-guest); box-shadow: 0 0 20px rgba(16, 185, 129, 0.2); }
+
+        /* --- SIDEBAR (Control Deck) --- */
+        .sidebar { 
+            display: flex; flex-direction: column; gap: 20px; 
+            height: 100%; min-height: 0;
+        }
+
+        /* Panel Card */
+        .panel {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+            flex-shrink: 0;
+        }
+
+        .panel-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .panel-title::before { content:''; width:4px; height:4px; background:var(--color-kernel); display:inline-block; border-radius:50%; }
+
+        /* Controls */
+        .control-group { margin-bottom: 16px; }
+        label { font-size: 10px; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px; font-family: var(--font-ui); }
+        
+        select {
+            width: 100%;
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            border: 1px solid var(--border-subtle);
+            padding: 10px;
+            border-radius: 8px;
+            font-family: var(--font-code);
+            font-size: 11px;
+            cursor: pointer;
+            transition: border 0.2s;
+        }
+        select:hover, select:focus { border-color: var(--color-kernel); }
+
+        .spawn-group { display: flex; gap: 8px; }
+        .btn-add {
+            background: var(--color-kernel);
+            color: white; border: none;
+            width: 40px; border-radius: 8px;
+            font-size: 18px; cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-add:hover { background: #4f46e5; }
+
+        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white; border: none;
+            padding: 12px; border-radius: 8px;
+            font-weight: 600; font-size: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+            transition: transform 0.1s;
+        }
+        .btn-primary:active { transform: scale(0.98); }
+
+        .btn-secondary {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-active);
+            color: var(--text-primary);
+            padding: 12px; border-radius: 8px;
+            font-weight: 600; font-size: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-secondary:hover { background: var(--border-subtle); }
+
+        /* --- TERMINAL --- */
+        .terminal {
+            background: #000; /* Deep black */
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            flex-grow: 1;
+            padding: 16px;
+            font-family: var(--font-code);
+            font-size: 11px;
+            overflow-y: auto;
+            min-height: 0;
+            scroll-behavior: smooth;
+            position: relative;
+        }
+        .terminal::before {
+            content: 'root@kernel:~$ logs --watch';
+            display: block; color: var(--text-secondary);
+            border-bottom: 1px solid #333;
+            padding-bottom: 8px; margin-bottom: 12px;
+        }
+        
+        .log-entry { margin-bottom: 6px; padding-left: 8px; border-left: 2px solid #333; line-height: 1.4; }
+        .log-entry span { opacity: 0.6; margin-right: 8px; font-size: 10px; }
+        
+        .log-sys { border-left-color: var(--color-kernel); color: #a5b4fc; }
+        .log-err { border-left-color: var(--color-root); color: #fda4af; }
+        .log-success { border-left-color: var(--color-guest); color: #6ee7b7; }
+
+        /* --- ANIMATIONS & PACKETS --- */
+        .packet {
+            position: absolute; width: 28px; height: 28px;
+            background: var(--bg-app);
+            border: 1px solid var(--color-kernel);
+            border-radius: 6px;
+            color: white; display: flex; justify-content: center; align-items: center;
+            font-size: 14px; z-index: 20;
+            box-shadow: 0 0 15px var(--color-kernel);
+        }
+        .packet-label {
+            position: absolute; top: -24px; left: 50%; transform: translateX(-50%);
+            background: var(--color-kernel); color: white;
+            font-size: 9px; padding: 2px 6px; border-radius: 4px;
+            white-space: nowrap; font-weight: 700; font-family: var(--font-code);
+        }
+
         .overlay-icon {
             position: absolute;
             left: 50%; top: 50%;
             transform: translate(-50%, -50%);
-            font-size: 60px;
+            font-size: 64px;
             z-index: 50;
             pointer-events: none;
-            text-shadow: 4px 4px 0px black;
+            filter: drop-shadow(0 4px 10px rgba(0,0,0,0.5));
             animation: popFade 0.8s forwards;
         }
         @keyframes popFade {
@@ -114,92 +390,84 @@
             20% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
             100% { transform: translate(-50%, -80%) scale(0.8); opacity: 0; }
         }
-        .packet {
-            position: absolute; width: 24px; height: 24px;
-            background: black; border: 2px solid white;
-            color: white; display: flex; justify-content: center; align-items: center;
-            font-size: 12px; z-index: 20;
-        }
-        .packet-label {
-            position: absolute; top: -25px; left: 50%; transform: translateX(-50%);
-            background: var(--purple); border: 2px solid black; color: black;
-            font-size: 10px; white-space: nowrap; padding: 2px 5px; font-weight: bold;
-            box-shadow: 2px 2px 0px rgba(0,0,0,0.2);
-        }
-        .sidebar {
-            display: flex; flex-direction: column; gap: 20px; z-index: 10;
-            height: 100%; min-height: 0;
-        }
-        .panel { background: white; border: var(--border); padding: 15px; box-shadow: var(--shadow); flex-shrink: 0; }
-        .panel-title { background: black; color: white; padding: 8px; text-align: center; font-weight: bold; margin: -15px -15px 15px -15px; }
-        select, button {
-            width: 100%; padding: 10px; border: 2px solid black;
-            font-family: var(--mono); font-weight: bold; margin-bottom: 10px; cursor: pointer; position: relative;
-        }
-        .terminal {
-            background: #111; color: #0f0; border: var(--border);
-            flex-grow: 1; padding: 10px; font-size: 11px; overflow-y: auto; box-shadow: var(--shadow);
-            min-height: 0; scroll-behavior: smooth;
-        }
-        .log-entry { margin-bottom: 4px; padding-left: 5px; border-left: 3px solid #555; }
-        .log-err { color: #ff4757; border-left-color: #ff4757; }
+
+        hr { border: 0; border-top: 1px solid var(--border-subtle); margin: 20px 0; }
     </style>
 </head>
 <body>
 
 <header>
-    <h1>Message Passing IPC</h1>
+    <h1>
+        <div class="status-dot"></div>
+        <span>IPC_SIM</span> // KERNEL
+    </h1>
     <div class="btn-group">
-        <button onclick="sim.undo()" title="Undo (Ctrl+Z)" style="width:50px; font-size:18px; background:var(--yellow);">⎌</button>
-        <button onclick="sim.redo()" title="Redo (Ctrl+Y)" style="width:50px; font-size:18px; background:var(--yellow);">↻</button>
-        <button onclick="sim.reset()" title="Reset System" style="width:auto; background:var(--red); color:white;">RESET</button>
+        <button class="icon-btn" onclick="sim.undo()" title="Undo (Ctrl+Z)">⎌</button>
+        <button class="icon-btn" onclick="sim.redo()" title="Redo (Ctrl+Y)">↻</button>
+        <button class="reset-btn" onclick="sim.reset()" title="Reset System">REBOOT SYSTEM</button>
     </div>
 </header>
 
 <div class="layout">
+    <!-- KERNEL SPACE -->
     <div class="kernel-space" id="kernelSpace">
         <canvas id="wire-layer"></canvas>
-        <div style="position:absolute; top:20px; left:20px; pointer-events:none;">
-            <u style="font-weight:bold;">ACL RULES</u>
-            <div style="font-size:11px; margin-top:5px;">
-                <span style="color:var(--red)">■ ROOT:</span> Full Access<br>
-                <span style="color:#f39c12">■ USER:</span> No Root Access<br>
-                <span style="color:var(--green)">■ GUEST:</span> Guest Only
-            </div>
+        
+        <!-- ACL Legend -->
+        <div class="acl-legend">
+            <span class="acl-title">ACCESS CONTROL</span>
+            <div class="acl-item"><div class="dot" style="background:var(--color-root)"></div> ROOT (Full)</div>
+            <div class="acl-item"><div class="dot" style="background:var(--color-user)"></div> USER (Restricted)</div>
+            <div class="acl-item"><div class="dot" style="background:var(--color-guest)"></div> GUEST (Sandbox)</div>
         </div>
 
+        <!-- Kernel Node -->
         <div class="kernel-node" id="kernelNode">
             <div class="kernel-header">KERNEL BUFFER</div>
             <div class="buffer-container" id="bufferContainer">
-                <div style="opacity:0.5; font-size:10px; margin-top:10px;margin-left:60px">[EMPTY]</div>
+                <div style="opacity:0.4; font-family:var(--font-code); font-size:10px; text-align:center; margin-top:10px;">[BUFFER EMPTY]</div>
             </div>
         </div>
     </div>
 
+    <!-- CONTROL PANEL -->
     <aside class="sidebar">
         <div class="panel">
-            <div class="panel-title">CONTROL PANEL</div>
-            <div style="display:flex; gap:5px;">
+            <div class="panel-title">Process Manager</div>
+            
+            <div class="spawn-group">
                 <select id="spawnType">
                     <option value="root">ROOT (Admin)</option>
                     <option value="user">USER (Standard)</option>
                     <option value="guest">GUEST (Restricted)</option>
                 </select>
-                <button onclick="sim.spawn()" style="width:50px; background:var(--yellow);">+</button>
+                <button class="btn-add" onclick="sim.spawn()">+</button>
             </div>
-            <hr style="border:1px dashed #aaa; margin:15px 0;">
-            <label style="font-size:10px;">SENDER</label>
-            <select id="senderSelect"></select>
-            <div style="text-align:center; font-size:14px; margin:-5px 0;">↓</div>
-            <label style="font-size:10px;">RECEIVER</label>
-            <select id="receiverSelect"></select>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">
-                <button onclick="sim.send()" style="background:var(--green);">SEND ▶</button>
-                <button onclick="sim.read()" style="background:white;">READ ◀</button>
+            
+            <hr>
+
+            <div class="panel-title">Message Routing</div>
+
+            <div class="control-group">
+                <label>SENDER (PID)</label>
+                <select id="senderSelect"></select>
+            </div>
+            
+            <div style="text-align:center; color:var(--text-secondary); margin-bottom:8px;">↓</div>
+
+            <div class="control-group">
+                <label>RECEIVER (PID)</label>
+                <select id="receiverSelect"></select>
+            </div>
+
+            <div class="action-grid">
+                <button class="btn-primary" onclick="sim.send()">SEND MSG</button>
+                <button class="btn-secondary" onclick="sim.read()">READ MSG</button>
             </div>
         </div>
+
         <div class="terminal" id="terminal">
-            <div class="log-entry">[KERNEL] System Online.</div>
+            <div class="log-entry log-sys"><span>[BOOT]</span> System Kernel Initialized...</div>
         </div>
     </aside>
 </div>
@@ -211,7 +479,6 @@ class Sim {
         this.buffer = [];
         this.pid = 100;
 
-        // History only for user actions, not initial boot
         this.history = [];
         this.future = [];
 
@@ -224,6 +491,7 @@ class Sim {
 
         window.addEventListener('resize', () => this.resize());
 
+        // Shortcuts
         document.addEventListener('keydown', (e) => {
             if (e.ctrlKey || e.metaKey) {
                 if (e.key === 'z') { e.preventDefault(); this.undo(); }
@@ -231,19 +499,19 @@ class Sim {
             }
         });
 
-        // Initial permanent processes (not undoable)
+        // Initial Permanent Processes (Not tracked in Undo stack to prevent deletion)
         this.spawn('root', 'ROOT_SYS', false);
         this.spawn('user', 'USER_WEB', false);
         this.spawn('guest', 'GUEST_1', false);
 
-        // Save initial state as base for undo/redo (but we never pop below this)
+        // Base snapshot
         this.saveState();
 
         this.resize();
         this.loop();
     }
 
-    // Snapshot entire dynamic state
+    // --- STATE MGMT ---
     snapshot() {
         return {
             processes: this.procs.map(p => ({
@@ -267,10 +535,9 @@ class Sim {
         this.term.innerHTML = state.logHTML;
         this.term.scrollTop = this.term.scrollHeight;
 
-        // Remove all existing process nodes from DOM
+        // Rebuild Process DOM
         this.procs.forEach(p => { if (p.el) p.el.remove(); });
 
-        // Rebuild processes + DOM
         this.procs = state.processes.map(pData => {
             const el = document.createElement('div');
             el.className = `node ${pData.type}`;
@@ -285,7 +552,7 @@ class Sim {
     }
 
     undo() {
-        if (this.history.length <= 1) return; // Keep earliest snapshot
+        if (this.history.length <= 1) return;
         const current = this.history.pop();
         this.future.push(current);
         const prev = this.history[this.history.length - 1];
@@ -299,6 +566,7 @@ class Sim {
         this.restoreState(next);
     }
 
+    // --- LOGIC ---
     spawn(type, name, record = true) {
         const t = type || document.getElementById('spawnType').value;
         const n = name || `${t.toUpperCase()}_${this.pid}`;
@@ -313,7 +581,7 @@ class Sim {
         this.procs.push(p);
         this.placeNodes();
         this.updateUI();
-        this.log(`Spawned ${n}`);
+        this.log(`Process Spawned: ${n}`, 'sys');
 
         if (record) this.saveState();
     }
@@ -353,7 +621,7 @@ class Sim {
 
         if (s.id === r.id) {
             this.triggerError('⛔');
-            this.log(`BLOCKED: Loopback Error`, 'err');
+            this.log(`BLOCKED: Self-message denied`, 'err');
             return;
         }
 
@@ -362,7 +630,7 @@ class Sim {
             if (perm === true) {
                 this.buffer.push({from:sId, to:rId});
                 this.renderBuf();
-                this.log(`Msg Buffered for ${r.name}`);
+                this.log(`Buffered: ${s.name} ➝ ${r.name}`, 'success');
                 this.saveState();
             } else {
                 this.triggerError('⛔');
@@ -378,7 +646,7 @@ class Sim {
 
         if (sId === rId) {
             this.triggerError('⛔');
-            this.log(`READ ERROR: Loopback not allowed`, 'err');
+            this.log(`ERROR: Cannot read self`, 'err');
             return;
         }
 
@@ -387,7 +655,7 @@ class Sim {
 
         if (idx === -1) {
             this.triggerError('📭');
-            this.log(`READ ERROR: No message from sender`, 'err');
+            this.log(`ERROR: Buffer empty for ${r.name}`, 'err');
             return;
         }
 
@@ -396,10 +664,11 @@ class Sim {
         this.saveState();
 
         this.anim('kernel', r, 'DATA', () => {
-            this.log(`Delivered to ${r.name}`);
+            this.log(`Delivered to ${r.name}`, 'success');
         });
     }
 
+    // --- VISUALS ---
     triggerError(icon) {
         const el = document.createElement('div');
         el.className = 'overlay-icon';
@@ -407,9 +676,10 @@ class Sim {
         this.space.appendChild(el);
         setTimeout(() => el.remove(), 1000);
 
+        // Kernel Shake
         let i = 0;
         const shake = setInterval(() => {
-            const offsetX = (i % 2 === 0 ? 5 : -5);
+            const offsetX = (i % 2 === 0 ? 4 : -4);
             this.kernel.style.transform = `translate(calc(-50% + ${offsetX}px), -50%)`;
             i++;
             if (i > 6) {
@@ -422,7 +692,7 @@ class Sim {
     renderBuf() {
         this.bufUI.innerHTML = '';
         if (this.buffer.length === 0) {
-            this.bufUI.innerHTML = '<div style="opacity:0.5;font-size:10px;margin-top:10px;margin-left:60px">[EMPTY]</div>';
+            this.bufUI.innerHTML = '<div style="opacity:0.4; font-family:var(--font-code); font-size:10px; text-align:center; margin-top:10px;">[BUFFER EMPTY]</div>';
             return;
         }
         this.buffer.forEach(m => {
@@ -431,8 +701,10 @@ class Sim {
             if (s && r) {
                 const d = document.createElement('div');
                 d.className = 'msg-item';
-                d.innerHTML = `${s.name} → ${r.name}`;
-                d.style.borderLeft = `4px solid ${r.type==='root'?'red':r.type==='user'?'orange':'green'}`;
+                d.innerHTML = `<span>${s.name}</span> <span>→</span> <span>${r.name}</span>`;
+                // Border color based on destination
+                const color = r.type === 'root' ? 'var(--color-root)' : r.type === 'user' ? 'var(--color-user)' : 'var(--color-guest)';
+                d.style.borderLeftColor = color;
                 this.bufUI.appendChild(d);
             }
         });
@@ -457,8 +729,8 @@ class Sim {
             const x = start.x + (end.x - start.x) * ease;
             const y = start.y + (end.y - start.y) * ease;
 
-            p.style.left = (x-12)+'px';
-            p.style.top = (y-12)+'px';
+            p.style.left = (x-14)+'px';
+            p.style.top = (y-14)+'px';
 
             if (prog < 1) requestAnimationFrame(step);
             else {
@@ -487,8 +759,8 @@ class Sim {
             this.ctx.beginPath();
             this.ctx.moveTo(k.x, k.y);
             this.ctx.lineTo(pc.x, pc.y);
-            this.ctx.strokeStyle = '#00000020';
-            this.ctx.lineWidth = 3;
+            this.ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+            this.ctx.lineWidth = 2;
             this.ctx.stroke();
         });
         requestAnimationFrame(() => this.loop());
@@ -508,8 +780,9 @@ class Sim {
     }
 
     log(msg, type) {
-        const c = type==='err'?'log-err':'';
-        this.term.insertAdjacentHTML('beforeend', `<div class="log-entry ${c}">[${new Date().toLocaleTimeString()}] ${msg}</div>`);
+        const c = type==='err'?'log-err':type==='success'?'log-success':'log-sys';
+        const time = new Date().toLocaleTimeString('en-US', {hour12:false});
+        this.term.insertAdjacentHTML('beforeend', `<div class="log-entry ${c}"><span>[${time}]</span> ${msg}</div>`);
         this.term.scrollTop = this.term.scrollHeight;
     }
 
