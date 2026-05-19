@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPC Shared Memory Simulation</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@300;500;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <header>
+        <div class="brand">
+            <i data-lucide="database" class="brand-icon" style="color:var(--accent-secondary)"></i>
+            Shared Memory IPC
+        </div>
+
+        <div class="controls">
+            <button class="btn-reset" onclick="app.clearLogs()">CLEAR LOGS</button>
+            <div style="width:1px; background:var(--border-light); margin: 0 8px;"></div>
+            <button class="btn-reset"><a href="../index.html">MESSAGE PASSING</a></button>
+        </div>
+    </header>
+
+    <div class="layout">
+        <div class="visual-stack">
+            <!-- SHARED MEMORY VISUALIZATION -->
+            <div class="shm-space">
+
+                <div class="semaphore-grid">
+                    <div class="sem-box main">
+                        <span class="sem-label">SEMAPHORE</span>
+                        <div class="sem-value">
+                            <span id="val-semaphore">0</span>
+                            <span class="sem-sub">/<span id="val-total">5</span></span>
+                        </div>
+                    </div>
+
+                    <div class="sem-box read">
+                        <span class="sem-label">READERS</span>
+                        <div class="sem-value" id="val-readers">0</div>
+                        <div class="sem-timer" id="timer-readers"></div>
+                    </div>
+
+                    <div class="sem-box write">
+                        <span class="sem-label">WRITERS</span>
+                        <div class="sem-value" id="val-writers">0</div>
+                        <div class="sem-timer" id="timer-writers"></div>
+                    </div>
+
+                    <div class="sem-box erase">
+                        <span class="sem-label">ERASERS</span>
+                        <div class="sem-value" id="val-erasers">0</div>
+                        <div class="sem-timer" id="timer-erasers"></div>
+                    </div>
+                </div>
+
+                <div class="buffer-wrapper">
+                    <div class="buffer-header">
+                        <span>Physical Address Space</span>
+                        <span id="buffer-usage-text">0 / 5</span>
+                    </div>
+                    <div class="buffer-track" id="buffer-visual">
+                        <!-- Segments inserted by JS -->
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- TERMINAL -->
+            <div class="terminal" id="terminal">
+                <div class="terminal-header">
+                    <div class="term-dots">
+                        <div class="t-dot" style="background:#ff5f56"></div>
+                        <div class="t-dot" style="background:#ffbd2e"></div>
+                        <div class="t-dot" style="background:#27c93f"></div>
+                    </div>
+                    <span style="color:#666">shm.log // ACTIVE</span>
+                </div>
+                <div id="log-container">
+                    <div class="log-entry" style="opacity:0.5">System ready...</div>
+                </div>
+            </div>
+        </div>
+
+        <aside class="sidebar">
+
+            <div class="panel queue-stack">
+                <span class="panel-label">Process Schedulers</span>
+
+                <div class="queue-box q-read">
+                    <div class="queue-header">
+                        <span>READ QUEUE</span>
+                        <span id="read-count-badge">0</span>
+                    </div>
+                    <div id="read-queue"></div>
+                </div>
+
+                <div class="queue-box q-write">
+                    <div class="queue-header">
+                        <span>WRITE QUEUE</span>
+                        <span id="write-count-badge">0</span>
+                    </div>
+                    <div id="write-queue"></div>
+                </div>
+
+                <div class="queue-box q-erase">
+                    <div class="queue-header">
+                        <span>ERASE QUEUE</span>
+                        <span id="erase-count-badge">0</span>
+                    </div>
+                    <div id="erase-queue"></div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <span class="panel-label">Process Manager</span>
+
+                <div class="input-group">
+                    <div class="input-col">
+                        <span class="input-label">Priority</span>
+                        <input type="number" id="priority-input" value="10">
+                    </div>
+                    <div class="input-col">
+                        <span class="input-label">Aging</span>
+                        <input type="number" id="aging-input" value="5" onchange="app.updateAgingFactor()">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <div class="input-col">
+                        <span class="input-label">Time (s)</span>
+                        <input type="number" id="quantum-input" value="30" onchange="app.updateQuantumTime()">
+                    </div>
+                    <div class="input-col">
+                        <span class="input-label">Buffer Size</span>
+                        <input type="number" id="buffer-input" value="5" onchange="app.updateBufferSize()">
+                    </div>
+                </div>
+
+                <span class="panel-label" style="margin-top:10px">Spawn Process</span>
+                <div class="btn-grid">
+                    <button class="btn-action btn-read" onclick="app.addProcess('READ')">READ</button>
+                    <button class="btn-action btn-write" onclick="app.addProcess('WRITE')">WRITE</button>
+                    <button class="btn-action btn-erase" onclick="app.addProcess('ERASE')">ERASE</button>
+                </div>
+
+                <span class="panel-label" style="margin-top:20px">Manual Signal</span>
+                <div class="btn-grid">
+                    <button class="btn-action btn-read btn-sig" onclick="app.signal('READ')">SIG_READ</button>
+                    <button class="btn-action btn-write btn-sig" onclick="app.signal('WRITE')">SIG_WRITE</button>
+                    <button class="btn-action btn-erase btn-sig" onclick="app.signal('ERASE')">SIG_ERASE</button>
+                </div>
+
+            </div>
+
+        </aside>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        // Re-initialize Lucide icons after load just effectively
+        window.addEventListener('load', () => lucide.createIcons());
+    </script>
+</body>
+
+</html>
